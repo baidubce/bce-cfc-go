@@ -64,11 +64,11 @@ func main() {
 
 ## 编译代码
 编译代码时，需要设置``GOOS``和``GOARCH``两个环境变量来指定对应的运行时环境。  
-``
+```
 export GOOS=linux
 export GOARCH=amd64
 go build
-``
+```
 
 ## 打包输出
 用户可以将生成的二进制执行文件打包到zip文件中，并上传zip包即可。
