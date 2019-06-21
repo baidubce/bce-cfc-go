@@ -37,7 +37,7 @@ func init() {
 type EchoHandler struct {
 }
 
-func (h *testHandler) Handle(input io.Reader, output io.Writer, context InvokeContext) error {
+func (h *EchoHandler) Handle(input io.Reader, output io.Writer, context cfc.InvokeContext) error {
 	n, err := io.Copy(output, input)
 	log.Printf("copy %d bytes\n", n)
 	if err != nil {
