@@ -10,14 +10,6 @@ import (
 	"testing"
 )
 
-type defaultHandler struct {
-}
-
-func (h *defaultHandler) Handle(input io.Reader, output io.Writer, context InvokeContext) error {
-	output.Write([]byte("hello world"))
-	return nil
-}
-
 type testHandler struct {
 }
 
@@ -32,15 +24,19 @@ func (h *testHandler) Handle(input io.Reader, output io.Writer, context InvokeCo
 
 func TestRegisterHandler(t *testing.T) {
 	RegisterNamedHandler("index.handler", &testHandler{})
-	RegisterDefaultHandler(&defaultHandler{})
 
-	h1 := GetInvokeHandler("index.handler").(*testHandler)
+	handler, err := getInvokeHandler("index.handler")
+	if err != nil {
+		t.Fail()
+		return
+	}
+	h1 := handler.(*testHandler)
 	if h1 == nil {
 		t.Fail()
 		return
 	}
-	h2 := GetInvokeHandler("index.handler2").(*defaultHandler) // 获取默认handler
-	if h2 == nil {
+	handler, err = getInvokeHandler("index.handler2") // 获取默认handler
+	if err == nil {
 		t.Fail()
 		return
 	}

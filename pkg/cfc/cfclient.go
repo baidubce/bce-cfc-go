@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"runtime/debug"
 )
 
@@ -34,6 +35,12 @@ type InvokeResponse struct {
 	FuncError  string `json:"error,omitempty"`
 }
 
+type InvokeError struct {
+	ErrorMessage string `json:"errorMessage"`
+	ErrorType    string `json:"errorType"`
+	StackTrace   string `json:"stackTrace,omitempty"`
+}
+
 type InvokeHandler interface {
 	Handle(input io.Reader, output io.Writer, context InvokeContext) error
 }
@@ -42,23 +49,17 @@ var (
 	handlerMap = map[string]InvokeHandler{}
 )
 
-const (
-	DefaultHandlerName = "_default_"
-)
-
 func RegisterNamedHandler(name string, h InvokeHandler) {
 	handlerMap[name] = h
 }
 
-func RegisterDefaultHandler(h InvokeHandler) {
-	handlerMap[DefaultHandlerName] = h
-}
-
-func GetInvokeHandler(name string) InvokeHandler {
+func getInvokeHandler(name string) (handler InvokeHandler, err error) {
 	if h, ok := handlerMap[name]; ok {
-		return h
+		handler = h
+		return
 	}
-	return handlerMap[DefaultHandlerName]
+	err = &MissingHandlerError{handlerName: name}
+	return
 }
 
 type CfcClient struct {
@@ -115,23 +116,29 @@ func (iv *CfcClient) invokeFunction(request *InvokeRequest) (response *InvokeRes
 		iv.config, credential, []byte(request.ClientContext))
 	input := bytes.NewBuffer([]byte(request.EventObject))
 	output := new(bytes.Buffer)
-	handler := GetInvokeHandler(iv.config.Handler())
 	response = &InvokeResponse{
 		RequestID: request.RequestID,
 		Success:   true,
 	}
 
+	handler, err := getInvokeHandler(iv.config.Handler())
+	if err != nil {
+		response.Success = false
+		response.FuncError = formatError(err)
+		return
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			response.Success = false
-			response.FuncError = string(debug.Stack())
+			response.FuncError = formatError(r)
 		}
 	}()
 
-	err := handler.Handle(input, output, invokeContext)
+	err = handler.Handle(input, output, invokeContext)
 	if err != nil {
 		response.Success = false
-		response.FuncError = err.Error()
+		response.FuncError = formatError(err)
 	} else {
 		response.FuncResult = output.String()
 	}
@@ -175,4 +182,28 @@ func (iv *CfcClient) Close() {
 		iv.writer.Close()
 		iv.writer = nil
 	}
+}
+
+func formatError(err interface{}) string {
+	funcErr := InvokeError{}
+	switch err.(type) {
+	case error:
+		errObj := err.(error)
+		funcErr.ErrorMessage = errObj.Error()
+		typeName := reflect.TypeOf(err).Name()
+		if typeName == "" {
+			typeName = "Error"
+		}
+		funcErr.ErrorType = typeName
+	case string:
+		funcErr.ErrorMessage = err.(string)
+		funcErr.ErrorType = "ErrorString"
+	default:
+		funcErr.ErrorMessage = ""
+		funcErr.ErrorType = "Unknown"
+	}
+
+	funcErr.StackTrace = string(debug.Stack())
+	formatStr, _ := json.Marshal(funcErr)
+	return string(formatStr)
 }
