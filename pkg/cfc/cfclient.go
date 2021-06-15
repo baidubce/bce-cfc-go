@@ -70,7 +70,7 @@ type CfcClient struct {
 }
 
 const (
-	MAX_INVOKE_EVENT_LENGTH = 128 * 1024
+	MAX_INVOKE_EVENT_LENGTH = 6 * 1024 * 1024
 )
 
 func NewCfcClient(c *RuntimeConfig, maxEventSize int) *CfcClient {
