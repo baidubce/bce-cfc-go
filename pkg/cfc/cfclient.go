@@ -132,6 +132,7 @@ func (iv *CfcClient) invokeFunction(request *InvokeRequest) (response *InvokeRes
 		if r := recover(); r != nil {
 			response.Success = false
 			response.FuncError = formatError(r)
+			fmt.Println(response.FuncError)
 		}
 	}()
 
@@ -139,6 +140,8 @@ func (iv *CfcClient) invokeFunction(request *InvokeRequest) (response *InvokeRes
 	if err != nil {
 		response.Success = false
 		response.FuncError = formatError(err)
+		// FuncError包含了堆栈信息，不需做额外处理
+		fmt.Println(response.FuncError)
 	} else {
 		response.FuncResult = output.String()
 	}
