@@ -19,9 +19,9 @@ type Credential struct {
 
 type InvokeRequest struct {
 	RequestID       string
-	AccessKeyID     string
-	AccessKeySecret string
-	SecurityToken   string
+	AccessKeyID     string `json:"accessKey"`
+	AccessKeySecret string `json:"secretKey"`
+	SecurityToken   string `json:"securityToken"`
 	FunctionBrn     string
 	FunctionTimeout int
 	ClientContext   string `json:",omitempty"`
